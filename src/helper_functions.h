@@ -5,8 +5,7 @@
  *      Author: Tiffany Huang
  */
 
-#ifndef HELPER_FUNCTIONS_H_
-#define HELPER_FUNCTIONS_H_
+#pragma once
 
 #include <sstream>
 #include <fstream>
@@ -18,7 +17,7 @@
  * Struct representing one position/control measurement.
  */
 struct control_s {
-	
+
 	double velocity;	// Velocity [m/s]
 	double yawrate;		// Yaw rate [rad/s]
 };
@@ -27,7 +26,7 @@ struct control_s {
  * Struct representing one ground truth position.
  */
 struct ground_truth {
-	
+
 	double x;		// Global vehicle x position [m]
 	double y;		// Global vehicle y position
 	double theta;	// Global vehicle yaw [rad]
@@ -37,7 +36,7 @@ struct ground_truth {
  * Struct representing one landmark observation measurement.
  */
 struct LandmarkObs {
-	
+
 	int id;				// Id of matching landmark in the map.
 	double x;			// Local (vehicle coordinates) x position of landmark observation [m]
 	double y;			// Local (vehicle coordinates) y position of landmark observation [m]
@@ -53,7 +52,8 @@ inline double dist(double x1, double y1, double x2, double y2) {
 	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
-inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x, double pf_y, double pf_theta) {
+inline double * getError(double gt_x, double gt_y, double gt_theta, double pf_x, double pf_y,
+                         double pf_theta) {
 	static double error[3];
 	error[0] = fabs(pf_x - gt_x);
 	error[1] = fabs(pf_y - gt_y);
@@ -77,7 +77,7 @@ inline bool read_map_data(std::string filename, Map& map) {
 	if (!in_file_map) {
 		return false;
 	}
-	
+
 	// Declare single line of map file:
 	std::string line_map;
 
@@ -141,7 +141,6 @@ inline bool read_control_data(std::string filename, std::vector<control_s>& posi
 		iss_pos >> velocity;
 		iss_pos >> yawrate;
 
-		
 		// Set values
 		meas.velocity = velocity;
 		meas.yawrate = yawrate;
@@ -177,7 +176,7 @@ inline bool read_gt_data(std::string filename, std::vector<ground_truth>& gt) {
 		double x, y, azimuth;
 
 		// Declare single ground truth:
-		ground_truth single_gt; 
+		ground_truth single_gt;
 
 		//read data from line to values:
 		iss_pos >> x;
@@ -235,5 +234,3 @@ inline bool read_landmark_data(std::string filename, std::vector<LandmarkObs>& o
 	}
 	return true;
 }
-
-#endif /* HELPER_FUNCTIONS_H_ */
