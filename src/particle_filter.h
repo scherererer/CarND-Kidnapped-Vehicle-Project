@@ -8,6 +8,7 @@
 
 #include "helper_functions.h"
 
+#include <random>
 #include <string>
 #include <vector>
 
@@ -28,25 +29,14 @@ struct Particle {
 
 class ParticleFilter {
 
-	// Number of particles to draw
-	int num_particles;
-
-	// Flag, if filter is initialized
-	bool is_initialized;
-
-	// Vector of weights of all particles
-	std::vector<double> weights;
-
 public:
-	// Set of current particles
-	std::vector<Particle> particles;
-
-	// Constructor
+	~ParticleFilter();
 	// @param M Number of particles
-	ParticleFilter() : num_particles(0), is_initialized(false) {}
+	ParticleFilter();
 
-	// Destructor
-	~ParticleFilter() {}
+	// Set of current particles
+	std::vector<Particle> const &particles () const
+		{ return particles_; }
 
 	/**
 	 * init Initializes particle filter by initializing particles to Gaussian
@@ -54,21 +44,21 @@ public:
 	 * @param x Initial x position [m] (simulated estimate from GPS)
 	 * @param y Initial y position [m]
 	 * @param theta Initial orientation [rad]
-	 * @param std[] Array of dimension 3 [standard deviation of x [m], standard deviation of
-	 *   y [m], standard deviation of yaw [rad]]
+	 * @param std_dev[] Array of dimension 3 [standard deviation of x [m], standard deviation
+	 *   of y [m], standard deviation of yaw [rad]]
 	 */
-	void init(double x, double y, double theta, double std[]);
+	void init(double x, double y, double theta, double std_dev[]);
 
 	/**
 	 * prediction Predicts the state for the next time step
 	 *   using the process model.
 	 * @param delta_t Time between time step t and t+1 in measurements [s]
-	 * @param std_pos[] Array of dimension 3 [standard deviation of x [m], standard
+	 * @param std_dev[] Array of dimension 3 [standard deviation of x [m], standard
 	 *   deviation of y [m], standard deviation of yaw [rad]]
 	 * @param velocity Velocity of car from t to t+1 [m/s]
 	 * @param yaw_rate Yaw rate of car from t to t+1 [rad/s]
 	 */
-	void prediction(double delta_t, double std_pos[], double velocity, double yaw_rate);
+	void prediction(double delta_t, double std_dev[], double velocity, double yaw_rate);
 
 	/**
 	 * dataAssociation Finds which observations correspond to which landmarks (likely by using
@@ -114,7 +104,23 @@ public:
 	 * initialized Returns whether particle filter is initialized yet or not.
 	 */
 	const bool initialized() const {
-		return is_initialized;
+		return is_initialized_;
 	}
+
+private:
+	// Number of particles to draw
+	int num_particles_;
+
+	// Flag, if filter is initialized
+	bool is_initialized_;
+
+	// Set of current particles
+	std::vector<Particle> particles_;
+
+	// Vector of weights of all particles
+	std::vector<double> weights_;
+
+	std::random_device rand_device_;
+    std::default_random_engine rand_engine_;
 };
 
