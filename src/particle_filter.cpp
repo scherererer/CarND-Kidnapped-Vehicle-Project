@@ -139,8 +139,9 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted,
 			}
 		}
 
+		/// \todo This isn't right
 		if (nearestSquareDist < numeric_limits<double>::max ())
-			obs = nearest;
+			obs.id = nearest.id;
 	}
 }
 
@@ -160,10 +161,51 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   equation 3.33
 	//   http://planning.cs.uiuc.edu/node99.html
 
-	double product = 1.0;
-	for (unsigned i = 0; i < observations.size (); ++i)
+	// Optimization so we don't have to take the square root
+	double const sensorRangeSquared = sensor_range * sensor_range;
+
+	for (unsigned p = 0; p < num_particles_; ++p)
 	{
-		//product *= exp (-0.5 * ());
+		Particle const &particle = particles_[p];
+		double weight = 1.0;
+		std::vector<LandmarkObs> predictedLandmarks; // Transformed, filtered landmarks
+
+		for (Map::single_landmark_s const &l : map_landmarks.landmark_list)
+		{
+			/// Filter landmarks based on sensor range
+			double const dx = l.x_f - particle.x;
+			double const dy = l.y_f - particle.y;
+
+			if (dx * dx + dy * dy > sensorRangeSquared)
+				continue;
+
+			/// \todo Transform list of landmarks into observation space based on particle
+			/// orientation and position
+
+			LandmarkObs tl;
+
+			double const ct = cos(particle.theta);
+			double const st = sin(particle.theta);
+
+			/// \todo I may need to reverse this transform
+			tl.id = l.id_i;
+			tl.x = l.x_i * ct - l.y_i * st + particle.x;
+			tl.y = l.x_i * st + l.y_i * ct + particle.y;
+
+			predictedLandmarks.push_back (tl);
+		}
+
+		/// \todo Find associations
+		dataAssociation (predictedLandmarks, observations);
+
+		/// \todo Calculate probability for the measurement
+		//for (unsigned i = 0; i < map_landmarks.landmark_list.size (); ++i)
+		for (unsigned i = 0; i < predictedLandmarks.size (); ++i)
+		{
+			//product *= exp (-0.5 * ());
+		}
+
+		weights_[p] = weight;
 	}
 }
 

@@ -66,6 +66,8 @@ public:
 	 * @param predicted Vector of predicted landmark observations
 	 * @param observations Vector of landmark observations
 	 */
+	/// \todo Why is observations passed by reference like this? Not clear why it is supposed
+	/// to be used as return value.
 	void dataAssociation(std::vector<LandmarkObs> predicted,
 	                     std::vector<LandmarkObs>& observations);
 
