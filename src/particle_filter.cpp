@@ -5,6 +5,7 @@
 #include "particle_filter.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include <iostream>
@@ -120,6 +121,27 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted,
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it
 	// useful to implement this method and use it as a helper during the updateWeights phase.
 
+	for (LandmarkObs &obs : observations)
+	{
+		LandmarkObs nearest;
+		double nearestSquareDist = numeric_limits<double>::max ();
+
+		for (LandmarkObs pred : predicted)
+		{
+			double const dx = pred.x - obs.x;
+			double const dy = pred.y - obs.y;
+			double const squareDist = dx * dx + dy * dy;
+
+			if (squareDist < nearestSquareDist)
+			{
+				nearest = pred;
+				nearestSquareDist = squareDist;
+			}
+		}
+
+		if (nearestSquareDist < numeric_limits<double>::max ())
+			obs = nearest;
+	}
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -137,6 +159,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at
 	//   equation 3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	double product = 1.0;
+	for (unsigned i = 0; i < observations.size (); ++i)
+	{
+		//product *= exp (-0.5 * ());
+	}
 }
 
 void ParticleFilter::resample() {
@@ -144,6 +172,18 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
+	assert (weights_.size() == num_particles_);
+	assert (particles_.size() == num_particles_);
+
+	std::discrete_distribution<int> dd(weights_.begin (), weights_.end ());
+	std::vector<Particle> newParticles;
+
+	newParticles.reserve (num_particles_);
+
+	for (unsigned i = 0; i < num_particles_; ++i)
+		newParticles.push_back(particles_[dd(rand_engine_)]);
+
+	particles_.swap(newParticles);
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations,

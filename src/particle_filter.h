@@ -109,7 +109,7 @@ public:
 
 private:
 	// Number of particles to draw
-	int num_particles_;
+	int const num_particles_;
 
 	// Flag, if filter is initialized
 	bool is_initialized_;
