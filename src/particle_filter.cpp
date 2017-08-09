@@ -114,19 +114,25 @@ void ParticleFilter::prediction(double delta_t, double std_dev[], double velocit
 	}
 }
 
-void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted,
-                                     std::vector<LandmarkObs>& observations) {
+vector<LandmarkObs> ParticleFilter::dataAssociation(vector<LandmarkObs> const &predicted,
+													vector<LandmarkObs> const &observations) {
 	// TODO: Find the predicted measurement that is closest to each observed measurement and
 	// assign the observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it
 	// useful to implement this method and use it as a helper during the updateWeights phase.
 
-	for (LandmarkObs &obs : observations)
+	assert(! predicted.empty());
+
+	std::vector<LandmarkObs> associations;
+
+	associations.reserve (observations.size ());
+
+	for (LandmarkObs const &obs : observations)
 	{
 		LandmarkObs nearest;
 		double nearestSquareDist = numeric_limits<double>::max ();
 
-		for (LandmarkObs pred : predicted)
+		for (LandmarkObs const &pred : predicted)
 		{
 			double const dx = pred.x - obs.x;
 			double const dy = pred.y - obs.y;
@@ -139,10 +145,12 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted,
 			}
 		}
 
-		/// \todo This isn't right
-		if (nearestSquareDist < numeric_limits<double>::max ())
-			obs.id = nearest.id;
+		assert(nearestSquareDist != numeric_limits<double>::max ());
+
+		associations.push_back(nearest);
 	}
+
+	return associations;
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -167,42 +175,76 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	for (unsigned p = 0; p < num_particles_; ++p)
 	{
 		Particle const &particle = particles_[p];
-		double weight = 1.0;
-		std::vector<LandmarkObs> predictedLandmarks; // Transformed, filtered landmarks
+		std::vector<LandmarkObs> predictedLandmarks; // Filtered landmarks
+		std::vector<LandmarkObs> transformedObservations; // Transformed observations
 
+		// Add and transform all observations into map space
+		for (LandmarkObs const &obs : observations)
+		{
+			LandmarkObs to;
+
+			double const ct = cos(particle.theta);
+			double const st = sin(particle.theta);
+
+			/// \todo I may need to reverse this transform
+			to.id = obs.id;
+			to.x = obs.x * ct - obs.y * st + particle.x;
+			to.y = obs.x * st + obs.y * ct + particle.y;
+		}
+
+		// Collect all landmarks that are in range
 		for (Map::single_landmark_s const &l : map_landmarks.landmark_list)
 		{
-			/// Filter landmarks based on sensor range
 			double const dx = l.x_f - particle.x;
 			double const dy = l.y_f - particle.y;
 
 			if (dx * dx + dy * dy > sensorRangeSquared)
 				continue;
 
-			/// \todo Transform list of landmarks into observation space based on particle
-			/// orientation and position
+			LandmarkObs fl;
 
-			LandmarkObs tl;
+			fl.id = l.id_i;
+			fl.x = l.x_f;
+			fl.y = l.y_f;
 
-			double const ct = cos(particle.theta);
-			double const st = sin(particle.theta);
+			predictedLandmarks.push_back (fl);
+		}
 
-			/// \todo I may need to reverse this transform
-			tl.id = l.id_i;
-			tl.x = l.x_i * ct - l.y_i * st + particle.x;
-			tl.y = l.x_i * st + l.y_i * ct + particle.y;
-
-			predictedLandmarks.push_back (tl);
+		/// \todo I'm not sure if this is the best thing to do -- but if it can't make any
+		/// associations then it certainly can't make any correct associations, so give it no
+		/// weight
+		if (predictedLandmarks.empty () || transformedObservations.empty ())
+		{
+			weights_[p] = 0.0;
+			continue;
 		}
 
 		/// \todo Find associations
-		dataAssociation (predictedLandmarks, observations);
+		vector<LandmarkObs> const associations =
+			dataAssociation (predictedLandmarks, transformedObservations);
 
 		/// \todo Calculate probability for the measurement
-		//for (unsigned i = 0; i < map_landmarks.landmark_list.size (); ++i)
-		for (unsigned i = 0; i < predictedLandmarks.size (); ++i)
+		double weight = 1.0;
+
+		for (unsigned i = 0; i < transformedObservations.size (); ++i)
 		{
-			//product *= exp (-0.5 * ());
+			/// \todo Fixme using std_landmark
+			/// which is in (range, bearing) space
+			double const sigma_x = 1.0;
+			double const sigma_y = 1.0;
+
+			double const x = transformedObservations[i].x;
+			double const y = transformedObservations[i].y;
+			double const u_x = associations[i].x;
+			double const u_y = associations[i].y;
+
+			double const dx = x - u_x;
+			double const dy = y - u_y;
+
+			double const xterm = (dx * dx) / (2 * sigma_x * sigma_x);
+			double const yterm = (dy * dy) / (2 * sigma_y * sigma_y);
+
+			weight *= exp(xterm + yterm) / (2 * M_PI * sigma_x * sigma_y);
 		}
 
 		weights_[p] = weight;

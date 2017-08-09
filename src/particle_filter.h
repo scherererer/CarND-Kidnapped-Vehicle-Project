@@ -68,8 +68,8 @@ public:
 	 */
 	/// \todo Why is observations passed by reference like this? Not clear why it is supposed
 	/// to be used as return value.
-	void dataAssociation(std::vector<LandmarkObs> predicted,
-	                     std::vector<LandmarkObs>& observations);
+	std::vector<LandmarkObs> dataAssociation(std::vector<LandmarkObs> const &predicted,
+	                                         std::vector<LandmarkObs> const &observations);
 
 	/**
 	 * updateWeights Updates the weights for each particle based on the likelihood of the
