@@ -22,10 +22,10 @@ namespace
 
 inline double angleWrap (double a_)
 {
-	a_ = fmod (a_ + M_PI, 2.0 * M_PI);
+	a_ = fmod(a_, 2.0 * M_PI);
 	if (a_ < 0)
-		a_ += M_PI * 2.0;
-	return a_ - M_PI;
+		a_ += 2.0 * M_PI;
+	return a_;
 }
 
 template<typename T>
@@ -166,7 +166,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 	for (unsigned p = 0; p < num_particles_; ++p)
 	{
-		Particle const &particle = particles_[p];
+		Particle &particle = particles_[p];
 		std::vector<LandmarkObs> predictedLandmarks; // Filtered landmarks
 		std::vector<LandmarkObs> transformedObservations; // Transformed observations
 
@@ -241,6 +241,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		}
 
 		weights_[p] = weight;
+		particle.weight = weight;
 	}
 }
 
