@@ -20,6 +20,8 @@ using namespace std;
 namespace
 {
 
+double constexpr EPSILON = 0.0001;
+
 inline double angleWrap (double a_)
 {
 	a_ = fmod(a_, 2.0 * M_PI);
@@ -96,9 +98,13 @@ void ParticleFilter::prediction(double delta_t, double std_dev[], double velocit
 	{
 		double const thetaf = p.theta + yaw_rate * delta_t;
 		double const xf =
-			p.x + velocity / yaw_rate * (sin(thetaf) - sin(p.theta));
+			(fabs (yaw_rate) > EPSILON)
+			? p.x + (velocity / yaw_rate) * (sin(thetaf) - sin(p.theta))
+			: p.x + velocity * cos(p.theta) * delta_t;
 		double const yf =
-			p.y + velocity / yaw_rate * (cos(p.theta) - cos(thetaf));
+			(fabs (yaw_rate) > EPSILON)
+			? p.y + (velocity / yaw_rate) * (cos(p.theta) - cos(thetaf))
+			: p.y + velocity * sin(p.theta) * delta_t;
 
 		p.x = xf + randX(rand_engine_);
 		p.y = yf + randY(rand_engine_);
