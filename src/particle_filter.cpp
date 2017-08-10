@@ -20,16 +20,6 @@ using namespace std;
 namespace
 {
 
-/*template<typename T>
-inline typename std::enable_if<std::is_floating_point<T>::value>::type
-angleWrap (T a_)
-{
-	a_ = fmod (a_ + M_PI, 2.0 * M_PI);
-	if (a_ < 0)
-		a_ += M_PI * 2.0;
-	return a_ - M_PI;
-}*/
-
 inline double angleWrap (double a_)
 {
 	a_ = fmod (a_ + M_PI, 2.0 * M_PI);
@@ -51,10 +41,10 @@ ParticleFilter::~ParticleFilter()
 }
 
 ParticleFilter::ParticleFilter()
-	: num_particles_(0)
+	: num_particles_(100)
 	, is_initialized_(false)
 	, particles_ ()
-	, weights_ ()
+	, weights_ (num_particles_, 0.0)
 	, rand_device_ ()
 	, rand_engine_ (rand_device_ ())
 {
@@ -80,12 +70,14 @@ void ParticleFilter::init(double x, double y, double theta, double std_dev[]) {
 		p.id = i;
 		p.x = randX(rand_engine_);
 		p.y = randY(rand_engine_);
-		p.theta = angleWrap (randTheta(rand_engine_));
+		p.theta = angleWrap(randTheta(rand_engine_));
 
 		p.weight = initialWeight;
 
-		particles_.push_back (p);
+		particles_.push_back(p);
 	}
+
+	is_initialized_ = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_dev[], double velocity,
@@ -110,7 +102,7 @@ void ParticleFilter::prediction(double delta_t, double std_dev[], double velocit
 
 		p.x = xf + randX(rand_engine_);
 		p.y = yf + randY(rand_engine_);
-		p.theta = angleWrap (thetaf + randTheta(rand_engine_));
+		p.theta = angleWrap(thetaf + randTheta(rand_engine_));
 	}
 }
 
@@ -183,13 +175,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		{
 			LandmarkObs to;
 
+			/// \todo I may need to reverse this transform
 			double const ct = cos(particle.theta);
 			double const st = sin(particle.theta);
 
-			/// \todo I may need to reverse this transform
 			to.id = obs.id;
 			to.x = obs.x * ct - obs.y * st + particle.x;
 			to.y = obs.x * st + obs.y * ct + particle.y;
+
+			transformedObservations.push_back (to);
 		}
 
 		// Collect all landmarks that are in range
@@ -215,6 +209,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		/// weight
 		if (predictedLandmarks.empty () || transformedObservations.empty ())
 		{
+			cerr << "No predictions in range\n";
 			weights_[p] = 0.0;
 			continue;
 		}
@@ -228,10 +223,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 		for (unsigned i = 0; i < transformedObservations.size (); ++i)
 		{
-			/// \todo Fixme using std_landmark
-			/// which is in (range, bearing) space
-			double const sigma_x = 1.0;
-			double const sigma_y = 1.0;
+			double const sigma_x = std_landmark[0];
+			double const sigma_y = std_landmark[1];
 
 			double const x = transformedObservations[i].x;
 			double const y = transformedObservations[i].y;
@@ -244,7 +237,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double const xterm = (dx * dx) / (2 * sigma_x * sigma_x);
 			double const yterm = (dy * dy) / (2 * sigma_y * sigma_y);
 
-			weight *= exp(xterm + yterm) / (2 * M_PI * sigma_x * sigma_y);
+			weight *= exp(-1.0 * (xterm + yterm)) / (2 * M_PI * sigma_x * sigma_y);
 		}
 
 		weights_[p] = weight;
@@ -267,6 +260,7 @@ void ParticleFilter::resample() {
 	for (unsigned i = 0; i < num_particles_; ++i)
 		newParticles.push_back(particles_[dd(rand_engine_)]);
 
+	assert (particles_.size() == newParticles.size());
 	particles_.swap(newParticles);
 }
 
